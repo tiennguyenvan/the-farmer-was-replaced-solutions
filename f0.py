@@ -1,10 +1,8 @@
-full_size = get_world_size()
-half_size = full_size/2
-quad_size = full_size/4
-octa_size = full_size/8
-hexa_size = full_size/16
-
-# module acts as a helper
+FULL_SIZE = get_world_size()
+HALF_SIZE = FULL_SIZE/2
+QUAD_SIZE = FULL_SIZE/4
+OCTA_SIZE = FULL_SIZE/8
+HEXA_SIZE = FULL_SIZE/16
 
 
 def is_even(num):
@@ -15,18 +13,22 @@ def is_odd(num):
     return num % 2 != 0
 
 
+def none_func():
+    return
+
+
 def is_chess_tile(x, y):
     return is_even(x) == is_even(y)
 
 
 def chessboard_action(primary_action, secondary_action):
-    if is_chess_tile():
+    if is_chess_tile(get_pos_x(), get_pos_y()):
         primary_action()
     else:
         secondary_action()
 
 
-def go_to_xy(x, y):
+def go_to(x, y, action_during_move=none_func):
     dx = x - get_pos_x()
     dy = y - get_pos_y()
     dir_x = East
@@ -37,64 +39,53 @@ def go_to_xy(x, y):
         dir_y = South
 
     for _ in range(abs(dx)):
-        if not can_move(dir_x):
+        if action_during_move() == False or not can_move(dir_x):
             return False
+
         move(dir_x)
 
     for _ in range(abs(dy)):
-        if not can_move(dir_y):
+        if action_during_move() == False or not can_move(dir_y):
             return False
         move(dir_y)
 
     return True
 
 
-def false_function():
-    return False
-
-
-def do_action_on_area(width, height, action, pad_left=0, should_stop=false_function):
+def do_action_on_area(width, height, action):
     for row in range(height):
         for col in range(width):
-            if should_stop():
+            if action() == False:
                 return
-
-            action()
             if col == width - 1:
                 break
 
             if is_even(row):
                 move(East)
             else:
-                if pad_left and col < pad_left:
-                    continue
                 move(West)
 
         if row == height - 1:
             break
         move(North)
 
-    for _ in range(pad_left):
-        move(West)
-    for _ in range(height - 1):
-        move(South)
-    if is_odd(height):
-        for _ in range(width - pad_left - 1):
-            move(West)
+
+def soil_required(entity_name):
+    return entity_name != Entities.Grass and entity_name != Entities.Bush and entity_name != Entities.Tree and get_ground_type() != Grounds.Soil
 
 
-def plant_care(entity_name, water_threshold=0.5):
+def plant_care(entity_name):
     if get_entity_type() == Entities.Dead_Pumpkin:
         plant(Entities.Pumpkin)
         return
 
     if can_harvest():
         harvest()
-    if get_entity_type() != Entities.Grass and get_entity_type() != Entities.Bush and get_entity_type() != Entities.Tree and get_ground_type() != Grounds.Soil:
+    if soil_required(entity_name):
         till()
     plant(entity_name)
 
-    if get_water() < water_threshold:
+    if get_water() < 0.5:
         use_item(Items.Water)
     best_infect_pos = get_pos_x() % 3 == 1 and get_pos_y() % 3 == 1
     if best_infect_pos:
@@ -102,14 +93,30 @@ def plant_care(entity_name, water_threshold=0.5):
         use_item(Items.Weird_Substance)
 
 
-def full_board_action(action, should_stop=false_function, soil_required=False):
-    go_to_xy(0, 0)
+def full_board_action(action, soil_required=False, stop_check=none_func, after_stop=none_func):
+    clear()
+    go_to(0, 0)
+
+    def action_with_check(x, y):
+        go_to(x, y)
+        while stop_check() == False:
+            do_action_on_area(FULL_SIZE, 1, action)
+            go_to(x, y, action)
+
     if soil_required:
-        while num_drones() < max_drones():
-            spawn_drone(do_action_on_area, full_size, full_size, till)
-        do_action_on_area(full_size, full_size, till)
-    while num_drones() < max_drones():
-        spawn_drone(do_action_on_area, full_size,
-                    full_size, action, 0, should_stop)
-        print(num_drones())
-    do_action_on_area(full_size, full_size, action, 0, should_stop)
+        def till_soil(x, y):
+            go_to(x, y)
+            do_action_on_area(FULL_SIZE, 1, till)
+
+        for i in range(1, max_drones()):
+            spawn_drone(till_soil, 0, i)
+        till_soil(0, 0)
+
+    while num_drones() > 1:
+        continue
+    while True:
+        for i in range(1, max_drones()):
+            spawn_drone(action_with_check, 0, i)
+            continue
+        action_with_check(0, 0)
+        after_stop()
