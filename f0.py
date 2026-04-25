@@ -1,78 +1,10 @@
+full_size = get_world_size()
+half_size = full_size/2
+quad_size = full_size/4
+octa_size = full_size/8
+hexa_size = full_size/16
+
 # module acts as a helper
-
-SOLO_FARMING = False
-CATUS_TO_PUMPKIN_RATE = 64
-PUMPKIN_TO_CARROT_RATE = 512
-CARROT_TO_HAY_RATE = 512
-CARROT_TO_WOOD_RATE = 512
-APPLE_TO_CACTUS_RATE = 16
-
-
-def needed_items_for_target(target_amount, item_name, source_amount=0, rate=1):
-    """Return how many more source items are needed for a target amount."""
-    remaining_target = target_amount - num_items(item_name)
-    if remaining_target <= 0:
-        return 0
-
-    needed_source = remaining_target * rate
-    needed_source -= source_amount
-    if needed_source <= 0:
-        return 0
-
-    return needed_source
-
-
-def pumpkin_needed_more_for_target_cactus(target_cactus):
-    return needed_items_for_target(
-        target_cactus,
-        Items.Cactus,
-        num_items(Items.Pumpkin),
-        CATUS_TO_PUMPKIN_RATE,
-    )
-
-
-def carrot_needed_more_for_target_pumpkin(target_pumpkin):
-    return needed_items_for_target(
-        target_pumpkin,
-        Items.Pumpkin,
-        num_items(Items.Carrot),
-        PUMPKIN_TO_CARROT_RATE,
-    )
-
-
-def hay_needed_more_for_target_carrot(target_carrot):
-    return needed_items_for_target(
-        target_carrot,
-        Items.Carrot,
-        num_items(Items.Hay),
-        CARROT_TO_HAY_RATE,
-    )
-
-
-def wood_needed_more_for_target_carrot(target_carrot):
-    return needed_items_for_target(
-        target_carrot,
-        Items.Carrot,
-        num_items(Items.Wood),
-        CARROT_TO_WOOD_RATE,
-    )
-
-
-def cactus_needed_more_for_target_apple(target_apple):
-    return needed_items_for_target(
-        target_apple,
-        Items.Bone,
-        num_items(Items.Cactus),
-        APPLE_TO_CACTUS_RATE,
-    )
-
-
-def carrot_needed_more_for_sunflower(target_sunflower):
-    return needed_items_for_target(
-        target_sunflower,
-        Items.Power,
-        num_items(Items.Carrot),
-    )
 
 
 def is_even(num):
@@ -83,51 +15,48 @@ def is_odd(num):
     return num % 2 != 0
 
 
-def is_checkerboard_tile(x=None, y=None):
-    if x is None:
-        x = get_pos_x()
-    if y is None:
-        y = get_pos_y()
+def is_chess_tile(x, y):
     return is_even(x) == is_even(y)
 
 
-def go_to_xy(x, y):
-    cur_x = get_pos_x()
-    cur_y = get_pos_y()
-    dx = x - cur_x
-    dy = y - cur_y
-    moved_cleanly = True
+def chessboard_action(primary_action, secondary_action):
+    if is_chess_tile():
+        primary_action()
+    else:
+        secondary_action()
 
-    if SOLO_FARMING and random() < 0.01:
-        do_a_flip()
+
+def go_to_xy(x, y):
+    dx = x - get_pos_x()
+    dy = y - get_pos_y()
+    dir_x = East
+    if dx < 0:
+        dir_x = West
+    dir_y = North
+    if dy < 0:
+        dir_y = South
 
     for _ in range(abs(dx)):
-        if dx < 0:
-            if not can_move(West):
-                moved_cleanly = False
-            move(West)
-        else:
-            if not can_move(East):
-                moved_cleanly = False
-            move(East)
+        if not can_move(dir_x):
+            return False
+        move(dir_x)
 
     for _ in range(abs(dy)):
-        if dy < 0:
-            if not can_move(South):
-                moved_cleanly = False
-            move(South)
-        else:
-            if not can_move(North):
-                moved_cleanly = False
-            move(North)
+        if not can_move(dir_y):
+            return False
+        move(dir_y)
 
-    return moved_cleanly
+    return True
 
 
-def move_whole_area_do_action(width, height, action, pad_left=0, should_stop=None):
+def false_function():
+    return False
+
+
+def do_action_on_area(width, height, action, pad_left=0, should_stop=false_function):
     for row in range(height):
         for col in range(width):
-            if should_stop and should_stop():
+            if should_stop():
                 return
 
             action()
@@ -154,41 +83,33 @@ def move_whole_area_do_action(width, height, action, pad_left=0, should_stop=Non
             move(West)
 
 
-def ensure_soil(start_x, start_y, width, height):
-    go_to_xy(start_x, start_y)
-    if get_ground_type() != Grounds.Soil:
-        move_whole_area_do_action(width, height, till)
-
-
-def plant_care_harvest(entity_name, water_threshold=0.5):
+def plant_care(entity_name, water_threshold=0.5):
     if get_entity_type() == Entities.Dead_Pumpkin:
         plant(Entities.Pumpkin)
         return
 
     if can_harvest():
         harvest()
-
+    if get_entity_type() != Entities.Grass and get_entity_type() != Entities.Bush and get_entity_type() != Entities.Tree and get_ground_type() != Grounds.Soil:
+        till()
     plant(entity_name)
 
     if get_water() < water_threshold:
         use_item(Items.Water)
+    best_infect_pos = get_pos_x() % 3 == 1 and get_pos_y() % 3 == 1
+    if best_infect_pos:
+        use_item(Items.Fertilizer)
+        use_item(Items.Weird_Substance)
 
 
-def checkerboard_action(primary_action, secondary_action):
-    if is_checkerboard_tile():
-        primary_action()
-    else:
-        secondary_action()
-
-
-def farm_entity_forever(start_x, start_y, width, height, entity_name, needs_soil=True):
-    if needs_soil:
-        ensure_soil(start_x, start_y, width, height)
-    else:
-        go_to_xy(start_x, start_y)
-
-    def action():
-        plant_care_harvest(entity_name)
-
-    while True:
-        move_whole_area_do_action(width, height, action)
+def full_board_action(action, should_stop=false_function, soil_required=False):
+    go_to_xy(0, 0)
+    if soil_required:
+        while num_drones() < max_drones():
+            spawn_drone(do_action_on_area, full_size, full_size, till)
+        do_action_on_area(full_size, full_size, till)
+    while num_drones() < max_drones():
+        spawn_drone(do_action_on_area, full_size,
+                    full_size, action, 0, should_stop)
+        print(num_drones())
+    do_action_on_area(full_size, full_size, action, 0, should_stop)
