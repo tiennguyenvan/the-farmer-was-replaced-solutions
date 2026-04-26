@@ -74,12 +74,12 @@ def soil_required(entity_name):
     return entity_name != Entities.Grass and entity_name != Entities.Bush and entity_name != Entities.Tree and get_ground_type() != Grounds.Soil
 
 
-def plant_care(entity_name):
+def plant_care(entity_name, auto_harvest=False):
     if get_entity_type() == Entities.Dead_Pumpkin:
         plant(Entities.Pumpkin)
         return
 
-    if can_harvest():
+    if auto_harvest and can_harvest():
         harvest()
     if soil_required(entity_name):
         till()

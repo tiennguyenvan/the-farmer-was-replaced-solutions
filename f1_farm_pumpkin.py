@@ -1,16 +1,6 @@
 import f0
 
 
-def farm_hay():
-
-    def grass_care():
-        f0.plant_care(Entities.Grass)
-
-    while True:
-        # f0.full_board_action(grass_care)
-        f0.full_board_action(grass_care, True)
-
-
 PUMPKIN_MAP = {}
 
 
@@ -34,11 +24,11 @@ def farm_pumpkin():
 
     def pumpkin_care():
         if get_entity_type() != Entities.Pumpkin:
-            plant(Entities.Pumpkin)
+            f0.plant_care(Entities.Pumpkin, False)
             return
         if get_entity_type() == Entities.Dead_Pumpkin:
             harvest()
-            plant(Entities.Pumpkin)
+            f0.plant_care(Entities.Pumpkin, False)
             return
         if not can_harvest():
             return
