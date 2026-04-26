@@ -3,6 +3,8 @@
 import f0
 SUNFLOWERS = {}
 
+clear()
+
 
 def farm_power():
     def __clear_map():
@@ -15,11 +17,7 @@ def farm_power():
         power = measure()
         if not (power in SUNFLOWERS):
             SUNFLOWERS[power] = []
-        pos = (get_pos_x(), get_pos_y())
-        if f0.is_even(get_pos_y()):
-            SUNFLOWERS[power].append(pos)
-        else:
-            SUNFLOWERS[power].insert(0, pos)
+        SUNFLOWERS[power].append((get_pos_x(), get_pos_y()))
 
     def __one_drone_care(y):
         global SUNFLOWERS
@@ -27,42 +25,38 @@ def farm_power():
         f0.action_on_area(f0.FULL_SIZE, 1, __one_row_care)
         return SUNFLOWERS
 
-    handles = f0.all_action_w_index(__one_drone_care)
+    def __harvest_in_power(positions):
+        for pos in positions:
+            f0.go_to(pos[0], pos[1])
+            harvest()
+
     indexed = {}
-    for row in range(1, max_drones()):
+    y_step = 1
+    handles = {}
+    y = 0
+    for _ in range(max_drones()-1):
+        handles[y] = spawn_drone(__one_drone_care, y)
+        y = y + y_step
+        f0.go_to(0, y)
+    f0.wait_available_drone()
+    handles[y] = spawn_drone(__one_drone_care, y)
+    f0.wait_all_clones_finished()
+    y_step = -y_step
+
+    for row in range(max_drones()):
         indexed[row] = wait_for(handles[row])
-    indexed[0] = SUNFLOWERS
 
-    SCHEDULE = []
-    sweep_up = True
     for power in range(15, 6, -1):
-        if sweep_up:
-            row_start = 0
-            row_stop = max_drones()
-            row_step = 1
-        else:
-            row_start = max_drones() - 1
-            row_stop = -1
-            row_step = -1
-
-        for row in range(row_start, row_stop, row_step):
-            if not (power in indexed[row]):
-                continue
-            row_positions = indexed[row][power]
-            if sweep_up:
-                for j in range(len(row_positions)):
-                    SCHEDULE.append(row_positions[j])
-            else:
-                for j in range(len(row_positions) - 1, -1, -1):
-                    SCHEDULE.append(row_positions[j])
-        sweep_up = not sweep_up
-
-    row = 0
-    while row < len(SCHEDULE):
-        pos = SCHEDULE[row]
-        f0.go_to(pos[0], pos[1])
-        harvest()
-        row += 1
+        for i in range(max_drones()-1):
+            if power in indexed[y]:
+                spawn_drone(__harvest_in_power, indexed[y][power])
+            y = y + y_step
+            f0.go_to(0, y)
+        if power in indexed[y]:
+            f0.wait_available_drone()
+            spawn_drone(__harvest_in_power, indexed[y][power])
+        f0.wait_all_clones_finished()
+        y_step = -y_step
 
     f0.all_action(__clear_map)
 

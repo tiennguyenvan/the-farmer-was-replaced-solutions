@@ -98,6 +98,20 @@ def all_clones_finished():
     return num_drones() == 1
 
 
+def wait_all_clones_finished():
+    while not all_clones_finished():
+        continue
+
+
+def has_available_drone():
+    return num_drones() < max_drones()
+
+
+def wait_available_drone():
+    while not has_available_drone():
+        continue
+
+
 def till_one_row(y):
     go_to(0, y)
     action_on_area(FULL_SIZE, 1, till)
