@@ -108,9 +108,11 @@ def all_till_full_board():
     all_action_w_index(till_one_row)
 
 
-def all_action_w_index_w_arg(action, arg):
+def all_action_w_index_w_arg(action, arg, n=None):
     hanles = {}
-    for i in range(1, max_drones()):
+    if n == None:
+        n = max_drones()
+    for i in range(1, n):
         hanles[i] = spawn_drone(action, i, arg)
     hanles[0] = action(0, arg)
     while not all_clones_finished():
@@ -118,9 +120,11 @@ def all_action_w_index_w_arg(action, arg):
     return hanles
 
 
-def all_action_w_index(action):
+def all_action_w_index(action, n=None):
     hanles = {}
-    for i in range(1, max_drones()):
+    if n == None:
+        n = max_drones()
+    for i in range(1, n):
         hanles[i] = spawn_drone(action, i)
     hanles[0] = action(0)
     while not all_clones_finished():
@@ -128,9 +132,11 @@ def all_action_w_index(action):
     return hanles
 
 
-def all_action(action):
+def all_action(action, n=None):
     hanles = {}
-    for i in range(1, max_drones()):
+    if n == None:
+        n = max_drones()
+    for i in range(1, n):
         hanles[i] = spawn_drone(action)
     hanles[0] = action()
     while not all_clones_finished():
@@ -138,9 +144,11 @@ def all_action(action):
     return hanles
 
 
-def all_action_w_arg(action, arg):
+def all_action_w_arg(action, arg, n=None):
     hanles = {}
-    for i in range(1, max_drones()):
+    if n == None:
+        n = max_drones()
+    for i in range(1, n):
         hanles[i] = spawn_drone(action, arg)
     hanles[0] = action(arg)
     while not all_clones_finished():
