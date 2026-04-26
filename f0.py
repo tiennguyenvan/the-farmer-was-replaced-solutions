@@ -13,7 +13,7 @@ def is_odd(num):
     return num % 2 != 0
 
 
-def none_func():
+def none_func(any_arg=None):
     return
 
 
@@ -52,7 +52,7 @@ def go_to(x, y, action_during_move=none_func):
     return True
 
 
-def do_action_on_area(width, height, action):
+def action_on_area(width, height, action):
     for row in range(height):
         for col in range(width):
             if action() == False:
@@ -83,7 +83,8 @@ def plant_care(entity_name, auto_harvest=False):
         harvest()
     if soil_required(entity_name):
         till()
-    plant(entity_name)
+    if entity_name != Entities.Grass:
+        plant(entity_name)
 
     if get_water() < 0.5:
         use_item(Items.Water)
@@ -93,30 +94,55 @@ def plant_care(entity_name, auto_harvest=False):
         use_item(Items.Weird_Substance)
 
 
-def full_board_action(action, soil_required=False, stop_check=none_func, after_stop=none_func):
+def all_clones_finished():
+    return num_drones() == 1
+
+
+def till_one_row(y):
+    go_to(0, y)
+    action_on_area(FULL_SIZE, 1, till)
+
+
+def all_till_full_board():
     clear()
-    go_to(0, 0)
+    all_action_w_index(till_one_row)
 
-    def action_with_check(x, y):
-        go_to(x, y)
-        while stop_check() == False:
-            do_action_on_area(FULL_SIZE, 1, action)
-            go_to(x, y, action)
 
-    if soil_required:
-        def till_soil(x, y):
-            go_to(x, y)
-            do_action_on_area(FULL_SIZE, 1, till)
-
-        for i in range(1, max_drones()):
-            spawn_drone(till_soil, 0, i)
-        till_soil(0, 0)
-
-    while num_drones() > 1:
+def all_action_w_index_w_arg(action, arg):
+    hanles = {}
+    for i in range(1, max_drones()):
+        hanles[i] = spawn_drone(action, i, arg)
+    hanles[0] = action(0, arg)
+    while not all_clones_finished():
         continue
-    while True:
-        for i in range(1, max_drones()):
-            spawn_drone(action_with_check, 0, i)
-            continue
-        action_with_check(0, 0)
-        after_stop()
+    return hanles
+
+
+def all_action_w_index(action):
+    hanles = {}
+    for i in range(1, max_drones()):
+        hanles[i] = spawn_drone(action, i)
+    hanles[0] = action(0)
+    while not all_clones_finished():
+        continue
+    return hanles
+
+
+def all_action(action):
+    hanles = {}
+    for i in range(1, max_drones()):
+        hanles[i] = spawn_drone(action)
+    hanles[0] = action()
+    while not all_clones_finished():
+        continue
+    return hanles
+
+
+def all_action_w_arg(action, arg):
+    hanles = {}
+    for i in range(1, max_drones()):
+        hanles[i] = spawn_drone(action, arg)
+    hanles[0] = action(arg)
+    while not all_clones_finished():
+        continue
+    return hanles
