@@ -9,11 +9,7 @@ def is_even(num):
     return num % 2 == 0
 
 
-def is_odd(num):
-    return num % 2 != 0
-
-
-def none_func(any_arg=None):
+def none_func(a1=None, a2=None, a3=None, a4=None):
     return
 
 
@@ -52,22 +48,29 @@ def go_to(x, y, action_during_move=none_func):
     return True
 
 
-def action_on_area(width, height, action):
-    for row in range(height):
-        for col in range(width):
-            if action() == False:
-                return
-            if col == width - 1:
-                break
-
-            if is_even(row):
-                move(East)
-            else:
-                move(West)
-
-        if row == height - 1:
-            break
-        move(North)
+def action_on_area(x, y, width, height, action, stop_check=none_func):
+    if not go_to(x, y):
+        return False
+    if width <= 0 or height <= 0:
+        return
+    x_step = 1
+    y_step = 1
+    x0 = x
+    y0 = y
+    x1 = x + width - 1
+    y1 = y + height - 1
+    while stop_check() != True:
+        if action() == False:
+            return
+        x0 = x0 + x_step
+        if x0 > x1 or x0 < x:
+            x_step = -x_step
+            x0 += x_step
+            y0 = y0 + y_step
+            if y0 > y1 or y0 < y:
+                y_step = -y_step
+                y0 += y_step
+        go_to(x0, y0)
 
 
 def soil_required(entity_name):
@@ -79,7 +82,7 @@ def plant_care(entity_name, auto_harvest=False):
         plant(Entities.Pumpkin)
         return
 
-    if auto_harvest and can_harvest():
+    if (auto_harvest or get_entity_type() != entity_name) and can_harvest():
         harvest()
     if soil_required(entity_name):
         till()
@@ -89,7 +92,7 @@ def plant_care(entity_name, auto_harvest=False):
     if get_water() < 0.5:
         use_item(Items.Water)
     best_infect_pos = get_pos_x() % 3 == 1 and get_pos_y() % 3 == 1
-    if best_infect_pos:
+    if best_infect_pos and num_items(Items.Fertilizer) > 10000:
         use_item(Items.Fertilizer)
         use_item(Items.Weird_Substance)
 
@@ -110,16 +113,6 @@ def has_available_drone():
 def wait_available_drone():
     while not has_available_drone():
         continue
-
-
-def till_one_row(y):
-    go_to(0, y)
-    action_on_area(FULL_SIZE, 1, till)
-
-
-def all_till_full_board():
-    clear()
-    all_action_w_index(till_one_row)
 
 
 def all_action_w_index_w_arg(action, arg, n=None):
@@ -146,7 +139,7 @@ def all_action_w_index(action, n=None):
     return hanles
 
 
-def all_action(action, n=None):
+def all_drones_action(action, n=None):
     hanles = {}
     if n == None:
         n = max_drones()
